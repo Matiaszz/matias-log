@@ -1,68 +1,68 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Api } from "@/lib/api";
+import { ApiResponse } from "@/types/api.types";
+
+interface HealthCheckData {
+  message: string;
+}
 
 export default function Home() {
+  const [response, setResponse] = useState<ApiResponse<HealthCheckData> | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchApiStatus = async () => {
+    setLoading(true);
+    const res = await Api.get<HealthCheckData>("/");
+    setResponse(res);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchApiStatus();
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-950 text-zinc-100 font-sans p-6">
+      <main className="w-full max-w-xl flex flex-col gap-6 bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${loading ? "bg-amber-400 animate-ping" : response?.success ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
+            <h1 className="text-xl font-bold tracking-tight text-white">API Health Check</h1>
+          </div>
+          <span className="text-xs font-mono px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-400 border border-zinc-700">
+            GET /
+          </span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <p className="text-sm text-zinc-400">
+          Endpoint: <code className="text-emerald-400 font-mono">https://api-bpb3enu4rq-uc.a.run.app/</code>
+        </p>
+
+        <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5 font-mono text-sm overflow-x-auto min-h-[160px] flex flex-col justify-center">
+          {loading ? (
+            <div className="flex items-center gap-2 text-zinc-400">
+              <svg className="animate-spin h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Chamando Api.get(&quot;/&quot;)...
+            </div>
+          ) : (
+            <pre className="text-emerald-300">
+              {JSON.stringify(response, null, 2)}
+            </pre>
+          )}
         </div>
+
+        <button
+          onClick={fetchApiStatus}
+          disabled={loading}
+          className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-medium text-sm text-white transition-all shadow-lg shadow-emerald-950 disabled:opacity-50"
+        >
+          {loading ? "Requisitando..." : "Testar Requisição Novamente"}
+        </button>
       </main>
     </div>
   );
