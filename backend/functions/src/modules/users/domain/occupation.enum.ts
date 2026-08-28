@@ -1,0 +1,20 @@
+export enum Occupation {
+  ESTUDANTE = "Estudante",
+  ESTAGIARIO = "Estagiário",
+  DEV_JUNIOR = "Desenvolvedor Júnior",
+  DEV_PLENO = "Desenvolvedor Pleno",
+  DEV_SENIOR = "Desenvolvedor Sênior",
+  TECH_LEAD = "Tech Lead",
+  TECH_RECRUITER = "Tech Recruiter",
+  ENGINEERING_MANAGER = "Engineering Manager",
+  SCRUM_MASTER = "Scrum Master / Agile Coach",
+  PRODUCT_OWNER = "Product Owner / Product Manager",
+  SOFTWARE_ARCHITECT = "Arquitetura de Software / Sistemas",
+  IT_GOVERNANCE = "Governança de T.I. / COBIT / ITIL",
+  IT_MANAGER = "Gerente de T.I. / Diretor de T.I.",
+  PROFESSOR = "Professor",
+  CTO = "CTO",
+  CEO = "CEO",
+  IT_CONSULTANT = "Consultor de T.I.",
+  OUTRO = "Outro"
+}
