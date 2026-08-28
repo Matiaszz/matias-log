@@ -15,13 +15,13 @@ import {
   onAuthStateChanged,
   User as FirebaseUser,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { auth, storage } from "@/lib/firebase";
 import { userService } from "@/lib/services/user.service";
 import {
   UserResponseDto,
   GoogleLoginDto,
   UpdateProfileDto,
-  UploadPhotoDto,
   DEFAULT_PROFILE_PICTURE,
 } from "@/types/user.types";
 
@@ -63,20 +63,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data:image/...;base64, prefix
-      const base64 = result.split(",")[1] || "";
-      resolve(base64);
-    };
-    reader.onerror = (error) => reject(error);
-  });
-}
-
 function getFileExtension(filename: string): "png" | "jpg" | "jpeg" | null {
   const ext = filename.split(".").pop()?.toLowerCase();
   if (ext === "png") return "png";
@@ -113,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // If user not found on backend (404), prompt for registration completion
+      // If user not found on backend, prompt for registration completion
       const nameParts = (fUser.displayName || "").trim().split(" ");
       const suggestedFirstName = nameParts[0] || "";
       const suggestedLastName = nameParts.slice(1).join(" ") || "";
@@ -219,6 +205,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       let chosenPhotoUrl = pendingGoogleUser.photoUrl || DEFAULT_PROFILE_PICTURE;
 
+      // Direct, safe upload to Firebase Storage from frontend
+      if (data.photoFile) {
+        const ext = getFileExtension(data.photoFile.name);
+        if (ext) {
+          const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+          const storageRef = ref(
+            storage,
+            `pictures/${pendingGoogleUser.firebaseUid}/profilePicture.${ext}`
+          );
+          await uploadBytes(storageRef, data.photoFile, { contentType: mimeType });
+          chosenPhotoUrl = await getDownloadURL(storageRef);
+        }
+      }
+
       const payload: GoogleLoginDto = {
         idToken,
         firstName: data.firstName.trim(),
@@ -235,24 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      let createdUser = response.data;
-
-      // If user uploaded a custom photo during registration, upload it to storage
-      if (data.photoFile) {
-        const ext = getFileExtension(data.photoFile.name);
-        if (ext) {
-          const imageBase64 = await fileToBase64(data.photoFile);
-          const photoRes = await userService.uploadPhoto(
-            { imageBase64, extension: ext },
-            idToken
-          );
-          if (photoRes.success && photoRes.data) {
-            createdUser = photoRes.data;
-          }
-        }
-      }
-
-      setUser(createdUser);
+      setUser(response.data);
       setIsPendingRegistration(false);
       setPendingGoogleUser(null);
       return true;
@@ -301,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const uploadProfilePicture = async (file: File): Promise<boolean> => {
-    if (!idToken) {
+    if (!firebaseUser || !idToken) {
       setError("Usuário não autenticado.");
       return false;
     }
@@ -312,22 +295,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Tamanho máximo de imagem é 5MB.");
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const imageBase64 = await fileToBase64(file);
-      const res = await userService.uploadPhoto({ imageBase64, extension: ext }, idToken);
+
+      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+      const storageRef = ref(storage, `pictures/${firebaseUser.uid}/profilePicture.${ext}`);
+
+      // Direct upload from frontend to Firebase Storage (enforced by storage security rules)
+      await uploadBytes(storageRef, file, { contentType: mimeType });
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // Update profile with the new public photo URL
+      const res = await userService.updateProfile({ photoUrl: downloadUrl }, idToken);
 
       if (res.success && res.data) {
         setUser(res.data);
         return true;
       } else {
-        setError(res.error?.message || "Erro ao enviar imagem.");
+        setError(res.error?.message || "Erro ao atualizar foto no perfil.");
         return false;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao fazer upload da foto:", err);
-      setError("Erro ao processar imagem.");
+      const errorObj = err as Error;
+      setError(errorObj.message || "Erro ao processar e salvar a imagem.");
       return false;
     } finally {
       setLoading(false);

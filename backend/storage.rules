@@ -1,10 +1,27 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Foto de perfil do usuário gerenciada de forma segura e direta pelo frontend:
+    // Apenas o usuário autenticado dono do UID pode fazer upload de sua própria foto.
+    // Restrito a imagens PNG, JPG, JPEG e tamanho máximo de 5MB.
+    match /pictures/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && (request.resource.contentType == 'image/png'
+                       || request.resource.contentType == 'image/jpeg'
+                       || request.resource.contentType == 'image/jpg');
+    }
+
+    // Foto de perfil padrão do sistema (somente leitura pública)
+    match /standardProfilePicture/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Bloqueio padrão para quaisquer outros caminhos
     match /{allPaths=**} {
       allow read, write: if false;
     }

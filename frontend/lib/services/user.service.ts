@@ -3,7 +3,6 @@ import { ApiResponse } from "@/types/api.types";
 import {
   GoogleLoginDto,
   UpdateProfileDto,
-  UploadPhotoDto,
   UserResponseDto,
 } from "@/types/user.types";
 
@@ -29,27 +28,13 @@ export class UserService {
   }
 
   /**
-   * Updates profile information (links, names, occupation, company, etc.).
+   * Updates profile information (links, names, occupation, company, photoUrl, etc.).
    */
   public async updateProfile(
     dto: UpdateProfileDto,
     idToken: string
   ): Promise<ApiResponse<UserResponseDto>> {
     return Api.patch<UserResponseDto>("/users/me", dto, {
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-  }
-
-  /**
-   * Uploads base64 encoded profile picture to Firebase Storage via backend.
-   */
-  public async uploadPhoto(
-    dto: UploadPhotoDto,
-    idToken: string
-  ): Promise<ApiResponse<UserResponseDto>> {
-    return Api.post<UserResponseDto>("/users/me/photo", dto, {
       headers: {
         Authorization: `Bearer ${idToken}`,
       },

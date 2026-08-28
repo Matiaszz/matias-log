@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import { sendSuccess } from "./shared/infrastructure/utils/apiResponse";
 import { authMiddleware } from "./shared/infrastructure/middlewares/auth.middleware";
-import { userController } from "./modules/users/controllers/user.controller";
+import { userController } from "./modules/users/presentation/user.controller";
 
 export * from "./shared/infrastructure/types/api.types";
 export * from "./shared/infrastructure/utils/apiResponse";
@@ -41,6 +41,5 @@ app.get("/", (_req, res) => {
 app.post("/users/google-login", (req, res) => userController.googleLogin(req, res));
 app.get("/users/me", authMiddleware, (req, res) => userController.getMe(req, res));
 app.patch("/users/me", authMiddleware, (req, res) => userController.updateProfile(req, res));
-app.post("/users/me/photo", authMiddleware, (req, res) => userController.uploadProfilePicture(req, res));
 
 export const api = onRequest({ invoker: "public" }, app);

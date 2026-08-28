@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { randomUUID } from "crypto";
-import { firebaseAdminAuth, firebaseStorage } from "../../../shared/infrastructure/firebaseAdmin";
+import { firebaseAdminAuth } from "../../../shared/infrastructure/firebaseAdmin";
 import { sendError, sendSuccess } from "../../../shared/infrastructure/utils/apiResponse";
 import { ErrorCode } from "../../../shared/infrastructure/types/api.types";
 import { AuthenticatedRequest } from "../../../shared/infrastructure/middlewares/auth.middleware";
@@ -160,73 +160,6 @@ export class UserController {
     }
 
     sendSuccess(res, toUserResponseDto(updatedUser));
-  }
-
-  /**
-   * Upload profile picture
-   * Endpoint: POST /api/users/me/photo
-   * Path format: pictures/{uid}/profilePicture.{extension}
-   * Extensions allowed: png, jpg, jpeg
-   */
-  public async uploadProfilePicture(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.firebaseUid) {
-      sendError(res, ErrorCode.UNAUTHORIZED, req.path);
-      return;
-    }
-
-    const user = await userRepository.findByFirebaseUid(req.firebaseUid);
-
-    if (!user) {
-      sendError(res, ErrorCode.NOT_FOUND, req.path, {
-        message: "Usuário não encontrado.",
-      });
-      return;
-    }
-
-    const { imageBase64, extension } = req.body as { imageBase64: string; extension: string };
-
-    if (!imageBase64 || !extension) {
-      sendError(res, ErrorCode.BAD_REQUEST, req.path, {
-        message: "Os campos imageBase64 e extension são obrigatórios.",
-      });
-      return;
-    }
-
-    const normalizedExt = extension.toLowerCase().replace(/^\./, "");
-    const allowedExtensions = ["png", "jpg", "jpeg"];
-
-    if (!allowedExtensions.includes(normalizedExt)) {
-      sendError(res, ErrorCode.BAD_REQUEST, req.path, {
-        message: "Formato de imagem não suportado. Use png, jpg ou jpeg.",
-      });
-      return;
-    }
-
-    try {
-      const buffer = Buffer.from(imageBase64, "base64");
-      const storagePath = `pictures/${req.firebaseUid}/profilePicture.${normalizedExt}`;
-      const bucket = firebaseStorage.bucket();
-      const file = bucket.file(storagePath);
-
-      const mimeType = normalizedExt === "png" ? "image/png" : "image/jpeg";
-
-      await file.save(buffer, {
-        metadata: { contentType: mimeType },
-        public: true,
-      });
-
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-
-      const updatedUser = await userRepository.update(user.id, { photoUrl: publicUrl });
-
-      sendSuccess(res, toUserResponseDto(updatedUser!));
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      sendError(res, ErrorCode.INTERNAL_ERROR, req.path, {
-        message: "Erro ao processar e salvar a foto de perfil.",
-        details: errorObj.message,
-      });
-    }
   }
 }
 
