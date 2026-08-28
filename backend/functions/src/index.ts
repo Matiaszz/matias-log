@@ -11,11 +11,27 @@ setGlobalOptions({ maxInstances: 10 });
 
 const app = express();
 
-app.use(cors({ origin: "https://matias-log.vercel.app/" }));
+const allowedOrigins = [
+  "https://matias-log.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Bloqueado por CORS"));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 
 app.get("/", (_req, res) => {
   sendSuccess(res, { message: "Api Running" });
 });
 
-export const api = onRequest(app);
+export const api = onRequest({ invoker: "public" }, app);
